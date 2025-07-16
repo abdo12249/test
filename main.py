@@ -4,7 +4,7 @@ import time
 import json
 import re
 from datetime import datetime
-import base64
+from base64 import b64encode
 import os
 
 # إعداد GitHub
@@ -125,7 +125,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
             "episodes": [ep_data]
         }
         content = json.dumps(new_data, indent=2, ensure_ascii=False)
-        encoded = base64.b64encode(content.encode()).decode()
+        encoded = b64encode(content.encode()).decode()
         payload = {
             "message": f"إنشاء ملف {filename} مع الحلقة {episode_number}",
             "content": encoded,
@@ -161,7 +161,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         print(f"➕ تم إضافة الحلقة {episode_number} الجديدة.")
     if updated:
         content = json.dumps(github_data, indent=2, ensure_ascii=False)
-        encoded = base64.b64encode(content.encode()).decode()
+        encoded = b64encode(content.encode()).decode()
         sha_response = scraper.get(api_url, headers=headers)
         sha = sha_response.json().get("sha") if sha_response.status_code == 200 else None
         payload = {
