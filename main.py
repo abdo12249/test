@@ -5,10 +5,9 @@ import json
 import re
 from datetime import datetime
 import base64
-import os  # لاستيراد المتغيرات البيئية
 
 # إعداد GitHub
-access_token = os.getenv("ACCESS_TOKEN")  # اخذ التوكن من المتغير البيئي
+access_token = "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"
 repo_name = "abdo12249/1"
 remote_folder = "test1/episodes"
 
@@ -44,7 +43,7 @@ def get_episode_links():
 def check_episode_on_github(anime_title):
     filename = to_id_format(anime_title) + ".json"
     url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
-    headers = {"Authorization": f"token {ACCESS_TOKEN}"}
+    headers = {"Authorization": f"token {access_token}"}
     response = scraper.get(url, headers=headers)
 
     if response.status_code == 200:
@@ -97,7 +96,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
     anime_id = to_id_format(anime_title)
     filename = anime_id + ".json"
     api_url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
-    headers = {"Authorization": f"token {ACCESS_TOKEN}"}
+    headers = {"Authorization": f"token {access_token}"}
 
     exists_on_github, github_data = check_episode_on_github(anime_title)
 
