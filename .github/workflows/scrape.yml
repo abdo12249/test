@@ -19,10 +19,7 @@ jobs:
           python-version: '3.10'
 
       - name: 📦 تثبيت المتطلبات
-        run: pip install requests beautifulsoup4
+        run: pip install cloudscraper beautifulsoup4
 
       - name: ▶️ تشغيل السكربت
         run: python main.py
-
-        - name: 📦 تثبيت المتطلبات
-        run: pip install cloudscraper beautifulsoup4
