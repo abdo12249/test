@@ -13,9 +13,11 @@ from notifier import send_discord_notification
 access_token = os.getenv("ACCESS_TOKEN")
 
 repo_name = "abdo12249/1"
-repo_name2 = "abdo12249/test"  # لتخزين log.json
 remote_folder = "test1/episodes"
-log_filename = "log.json"
+
+# إعدادات ملف السجل للأنميات المفقودة
+repo_name_log = "abdo12249/test" # يمكن تغيير هذا المستودع إذا لزم الأمر
+missing_anime_log_filename = "missing_anime_log.json"
 
 BASE_URL = "https://4i.nxdwle.shop"
 EPISODE_LIST_URL = BASE_URL + "/episode/"
@@ -81,50 +83,61 @@ def get_episode_data(episode_url):
             servers.append({"serverName": name, "url": url})
     return anime_title, episode_number, full_title, servers
 
-def save_log_local(anime_title, episode_number, episode_link):
-    entry = {
-        "anime_title": anime_title,
-        "episode_number": episode_number,
-        "episode_link": episode_link
-    }
-    if os.path.exists(log_filename):
-        with open(log_filename, "r", encoding="utf-8") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-    else:
-        data = []
-    data.append(entry)
-    with open(log_filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"📝 تم تحديث السجل المحلي في {log_filename}")
-
-    api_url = f"https://api.github.com/repos/{repo_name2}/contents/{log_filename}"
-    with open(log_filename, "rb") as f:
-        content = f.read()
-    encoded = base64.b64encode(content).decode()
+def log_missing_anime(anime_title, episode_link):
+    """
+    تسجيل الأنميات التي لم يكن لها ملف JSON موجود وتم إنشاؤه حديثًا.
+    """
+    api_url = f"https://api.github.com/repos/{repo_name_log}/contents/{missing_anime_log_filename}"
     headers = {"Authorization": f"token {access_token}"}
-    r = scraper.get(api_url, headers=headers)
-    if r.status_code == 200:
-        sha = r.json().get("sha")
-        payload = {
-            "message": "تحديث سجل log.json",
-            "content": encoded,
-            "branch": "main",
-            "sha": sha
-        }
+
+    # محاولة جلب ملف السجل الحالي
+    response = scraper.get(api_url, headers=headers)
+    log_data = []
+    sha = None
+
+    if response.status_code == 200:
+        sha = response.json().get("sha")
+        try:
+            content_decoded = base64.b64decode(response.json().get("content")).decode("utf-8")
+            log_data = json.loads(content_decoded)
+        except (json.JSONDecodeError, TypeError):
+            print("⚠️ فشل فك تشفير أو تحليل ملف السجل الحالي. سيتم إنشاء ملف جديد.")
+            log_data = []
+    elif response.status_code == 404:
+        print(f"ℹ️ ملف السجل {missing_anime_log_filename} غير موجود على GitHub. سيتم إنشاؤه.")
     else:
+        print(f"❌ فشل جلب ملف السجل من GitHub: {response.status_code} {response.text}")
+
+    # إضافة الإدخال الجديد إذا لم يكن موجودًا بالفعل
+    new_entry = {
+        "anime_title": anime_title,
+        "episode_link": episode_link,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    # التحقق مما إذا كان الإدخال موجودًا بالفعل لتجنب التكرار
+    # يمكن تعديل هذا الشرط ليكون أكثر تحديدًا إذا لزم الأمر
+    if not any(item.get("anime_title") == anime_title and item.get("episode_link") == episode_link for item in log_data):
+        log_data.append(new_entry)
+        content_to_upload = json.dumps(log_data, indent=2, ensure_ascii=False)
+        encoded_content = base64.b64encode(content_to_upload.encode("utf-8")).decode()
+
         payload = {
-            "message": "إنشاء ملف log.json",
-            "content": encoded,
+            "message": f"تحديث سجل الأنميات المفقودة: إضافة {anime_title}",
+            "content": encoded_content,
             "branch": "main"
         }
-    r = scraper.put(api_url, headers=headers, json=payload)
-    if r.status_code in [200, 201]:
-        print("📤 تم رفع log.json إلى GitHub.")
+        if sha:
+            payload["sha"] = sha
+
+        r = scraper.put(api_url, headers=headers, json=payload)
+        if r.status_code in [200, 201]:
+            print(f"✅ تم تحديث سجل الأنميات المفقودة في {missing_anime_log_filename} على GitHub.")
+        else:
+            print(f"❌ فشل رفع سجل الأنميات المفقودة إلى GitHub: {r.status_code} {r.text}")
     else:
-        print(f"❌ فشل رفع log.json: {r.status_code} {r.text}")
+        print(f"ℹ️ الأنمي '{anime_title}' موجود بالفعل في سجل الأنميات المفقودة. تم التخطي.")
+
 
 def save_to_json(anime_title, episode_number, episode_title, servers):
     anime_id = to_id_format(anime_title)
@@ -158,8 +171,9 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         r = scraper.put(api_url, headers=headers, json=payload)
         if r.status_code in [200, 201]:
             print(f"✅ تم إنشاء الملف ورفع البيانات على GitHub.")
-            save_log_local(anime_title, episode_number, ep_data["link"])
             send_discord_notification(anime_title, episode_number, ep_data["link"], ep_data["image"])
+            # تسجيل الأنمي في ملف السجل الجديد
+            log_missing_anime(anime_title, ep_data["link"])
         else:
             print(f"❌ فشل إنشاء الملف على GitHub: {r.status_code} {r.text}")
         return
@@ -201,7 +215,6 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         r = scraper.put(api_url, headers=headers, json=payload)
         if r.status_code in [200, 201]:
             print(f"🚀 تم رفع التحديث إلى GitHub بنجاح.")
-            save_log_local(anime_title, episode_number, ep_data["link"])
         else:
             print(f"❌ فشل رفع التحديث إلى GitHub: {r.status_code} {r.text}")
 
