@@ -44,7 +44,7 @@ def get_episode_links():
 def check_episode_on_github(anime_title):
     filename = to_id_format(anime_title) + ".json"
     url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
-    headers = {"Authorization": f"token {access_token}"}
+    headers = {"Authorization": f"token {ACCESS_TOKEN}"}
     response = scraper.get(url, headers=headers)
 
     if response.status_code == 200:
