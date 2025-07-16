@@ -21,11 +21,10 @@ jobs:
       - name: 📦 تثبيت المتطلبات
         run: pip install cloudscraper beautifulsoup4
 
+      - name: 🔍 فحص قيمة ACCESS_TOKEN (اختبار فقط)
+        run: echo "ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }}"
+
       - name: ▶️ تشغيل السكربت
         env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}   # تمرير التوكن من Secrets
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: python main.py
-
-        - name: 🔍 فحص قيمة ACCESS_TOKEN (اختبار فقط)
-  run: echo "ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }}"
-
