@@ -23,3 +23,6 @@ jobs:
 
       - name: ▶️ تشغيل السكربت
         run: python main.py
+
+        - name: 📦 تثبيت المتطلبات
+        run: pip install cloudscraper beautifulsoup4

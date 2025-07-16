@@ -1,4 +1,4 @@
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import time
 import json
@@ -15,6 +15,9 @@ BASE_URL = "https://4i.nxdwle.shop"
 EPISODE_LIST_URL = BASE_URL + "/episode/"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
+# إنشاء سكريبر يتجاوز حماية Cloudflare
+scraper = cloudscraper.create_scraper()
+
 def to_id_format(text):
     text = text.strip().lower()
     text = text.replace(":", "")
@@ -23,7 +26,8 @@ def to_id_format(text):
 
 def get_episode_links():
     print("📄 تحميل صفحة الحلقات...")
-    response = requests.get(EPISODE_LIST_URL, headers=HEADERS)
+    response = scraper.get(EPISODE_LIST_URL, headers=HEADERS)
+    print("Status Code:", response.status_code)
     if response.status_code != 200:
         print("❌ فشل تحميل الصفحة")
         return []
@@ -40,13 +44,13 @@ def check_episode_on_github(anime_title):
     filename = to_id_format(anime_title) + ".json"
     url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
     headers = {"Authorization": f"token {access_token}"}
-    response = requests.get(url, headers=headers)
+    response = scraper.get(url, headers=headers)
 
     if response.status_code == 200:
         print(f"✅ الملف موجود على GitHub: {filename}")
         download_url = response.json().get("download_url")
         if download_url:
-            r = requests.get(download_url)
+            r = scraper.get(download_url)
             if r.status_code == 200:
                 return True, r.json()
         return True, None
@@ -59,7 +63,7 @@ def check_episode_on_github(anime_title):
 
 def get_episode_data(episode_url):
     print(f"🎬 تحميل: {episode_url}")
-    response = requests.get(episode_url, headers=HEADERS)
+    response = scraper.get(episode_url, headers=HEADERS)
     if response.status_code != 200:
         print("❌ فشل تحميل الحلقة.")
         return None, None, None, None
@@ -136,7 +140,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         content = json.dumps(github_data, indent=2, ensure_ascii=False)
         encoded = base64.b64encode(content.encode()).decode()
 
-        sha_response = requests.get(api_url, headers=headers)
+        sha_response = scraper.get(api_url, headers=headers)
         sha = sha_response.json().get("sha") if sha_response.status_code == 200 else None
 
         payload = {
@@ -147,14 +151,13 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         if sha:
             payload["sha"] = sha
 
-        r = requests.put(api_url, headers=headers, json=payload)
+        r = scraper.put(api_url, headers=headers, json=payload)
         if r.status_code in [200, 201]:
             print(f"🚀 تم رفع التحديث إلى GitHub بنجاح.")
         else:
             print(f"❌ فشل رفع التحديث إلى GitHub: {r.status_code} {r.text}")
 
-# ✅ تشغيل مباشر مرة واحدة
-print("\n⏳ بدء التحقق من الحلقات...")
+# ✅ تنفيذ الكود
 all_links = get_episode_links()
 
 for idx, link in enumerate(all_links):
@@ -165,5 +168,3 @@ for idx, link in enumerate(all_links):
     else:
         print("❌ تخطيت الحلقة بسبب خطأ.")
     time.sleep(1)
-
-print("\n✅ انتهى التحقق.")
