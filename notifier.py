@@ -14,7 +14,8 @@ def send_discord_notification(anime_title, episode_number, episode_link, image_u
     embed = {
         "title": f"{anime_title} - الحلقة {episode_number}",
         "url": episode_link,
-        "description": f"🎉 تم إصدار حلقة جديدة!\n<@{DISCORD_USER_ID}>",
+        # تعديل الوصف ليتضمن رابط المشاهدة كنص والمنشن باسم المستخدم بالترتيب الجديد مع إضافة إيموجي
+        "description": f"🎉 تم إصدار حلقة جديدة!\n@{DISCORD_USER_NAME}\nرابط المشاهدة\n[اضغط هنا للمشاهدة]({episode_link})",
         "color": 0x1ABC9C,
         "timestamp": datetime.utcnow().isoformat()
     }
@@ -23,25 +24,13 @@ def send_discord_notification(anime_title, episode_number, episode_link, image_u
         embed["thumbnail"] = {"url": image_url}
         embed["image"] = {"url": image_url}
 
+    # حذف قسم "components" حيث لم يعد هناك زر
     payload = {
-        "content": f"<@{DISCORD_USER_ID}>",
+        "content": f"<@{DISCORD_USER_ID}>", # لا يزال يستخدم ID للمنشن في المحتوى لضمان التوافق
         "embeds": [embed],
         "allowed_mentions": {
             "users": [DISCORD_USER_ID]
         },
-        "components": [
-            {
-                "type": 1,
-                "components": [
-                    {
-                        "type": 2,
-                        "style": 5,
-                        "label": "🎬 مشاهدة الآن",
-                        "url": episode_link
-                    }
-                ]
-            }
-        ]
     }
 
     try:
