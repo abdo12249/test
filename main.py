@@ -220,33 +220,3 @@ for idx, link in enumerate(all_links):
     else:
         print("❌ تخطيت الحلقة بسبب خطأ.")
     time.sleep(1)
-name: Run Anime Scraper Every Hour
-
-on:
-  schedule:
-    - cron: '0 * * * *'  # كل ساعة عند الدقيقة صفر
-  workflow_dispatch:
-
-jobs:
-  run-script:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 🧾 سحب المستودع
-        uses: actions/checkout@v3
-
-      - name: 🔽 إعداد Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: 📦 تثبيت المتطلبات
-        run: pip install cloudscraper beautifulsoup4
-
-      - name: 🔍 فحص قيمة ACCESS_TOKEN (اختبار فقط)
-        run: echo "ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }}"
-
-      - name: ▶️ تشغيل السكربت
-        env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        run: python main.py
