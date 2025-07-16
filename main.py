@@ -24,7 +24,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 scraper = cloudscraper.create_scraper()
 
 def send_discord_notification(anime_title, episode_number, episode_link, image_url=None):
-    user_id = "1395041371181809754"  # 👈 ضع هنا ID الخاص بـ Anime(AMK4UP)
+    user_id = "1395041371181809754"  # 👈 ID الخاص بـ Anime(AMK4UP)
 
     embed = {
         "title": f"{anime_title} - الحلقة {episode_number}",
@@ -41,8 +41,12 @@ def send_discord_notification(anime_title, episode_number, episode_link, image_u
         "timestamp": datetime.utcnow().isoformat()
     }
 
+    if image_url:
+        embed["thumbnail"] = {"url": image_url}   # 👈 صورة مصغرة
+        embed["image"] = {"url": image_url}       # 👈 صورة كاملة
+
     payload = {
-        "content": f"<@{user_id}>",  # 👈 الإشارة خارج الـ Embed
+        "content": f"<@{user_id}>",  # الإشارة خارج الـ Embed
         "embeds": [embed],
         "allowed_mentions": {
             "users": [user_id]
@@ -57,6 +61,7 @@ def send_discord_notification(anime_title, episode_number, episode_link, image_u
             print(f"❌ فشل إرسال الإشعار: {response.status_code} {response.text}")
     except Exception as e:
         print(f"❌ خطأ أثناء إرسال الإشعار إلى Discord: {e}")
+
 
 
 def to_id_format(text):
