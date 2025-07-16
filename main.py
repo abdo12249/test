@@ -4,8 +4,8 @@ import time
 import json
 import re
 from datetime import datetime
+import base64  # مهم جدا
 import os
-import base64
 
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
@@ -81,15 +81,13 @@ def get_episode_data(episode_url):
             servers.append({"serverName": name, "url": url})
     return anime_title, episode_number, full_title, servers
 
-# دالة جديدة: حفظ سجل مبسط محلياً في log.json
 def save_log_local(anime_title, episode_number, episode_link):
-    log_file = "log.json"  # نفس مجلد main.py
+    log_file = "log.json"
     entry = {
         "anime_title": anime_title,
         "episode_number": episode_number,
         "episode_link": episode_link
     }
-    # اقرأ المحتوى السابق لو موجود
     if os.path.exists(log_file):
         with open(log_file, "r", encoding="utf-8") as f:
             try:
@@ -99,7 +97,6 @@ def save_log_local(anime_title, episode_number, episode_link):
     else:
         data = []
     data.append(entry)
-    # اكتب المحتوى بعد الإضافة
     with open(log_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"📝 تم تحديث السجل المحلي في {log_file}")
@@ -109,6 +106,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
     filename = anime_id + ".json"
     api_url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
     headers = {"Authorization": f"token {access_token}"}
+
     exists_on_github, github_data = check_episode_on_github(anime_title)
 
     ep_data = {
@@ -136,7 +134,6 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         r = scraper.put(api_url, headers=headers, json=payload)
         if r.status_code in [200, 201]:
             print(f"✅ تم إنشاء الملف ورفع البيانات على GitHub.")
-            # هنا تحفظ السجل المحلي
             save_log_local(anime_title, episode_number, ep_data["link"])
         else:
             print(f"❌ فشل إنشاء الملف على GitHub: {r.status_code} {r.text}")
@@ -180,8 +177,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         else:
             print(f"❌ فشل رفع التحديث إلى GitHub: {r.status_code} {r.text}")
 
-# =========================
-# التنفيذ الرئيسي
+# === التنفيذ ===
 
 all_links = get_episode_links()
 
