@@ -7,7 +7,7 @@ from datetime import datetime
 import base64
 
 # إعداد GitHub
-access_token = "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"
+access_token = "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"
 repo_name = "abdo12249/1"
 remote_folder = "test1/episodes"
 
