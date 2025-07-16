@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 import base64  # مهم جدا
 import os
+print("base64 module loaded:", base64)
 
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
