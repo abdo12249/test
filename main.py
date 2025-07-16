@@ -24,7 +24,7 @@ scraper = cloudscraper.create_scraper()
 def to_id_format(text):
     text = text.strip().lower()
     text = text.replace(":", "")
-    text = re.sub(r"[^a-z0-9()\- ]", "", text)
+    text = re.sub(r"[^a-z0-9()!\- ]", "", text)  # السماح بـ () و ! والشرطة والمسافات
     return text.replace(" ", "-")
 
 def get_episode_links():
