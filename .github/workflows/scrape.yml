@@ -25,3 +25,7 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}   # تمرير التوكن من Secrets
         run: python main.py
+
+        - name: 🔍 فحص قيمة ACCESS_TOKEN (اختبار فقط)
+  run: echo "ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }}"
+
