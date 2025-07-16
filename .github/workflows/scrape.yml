@@ -2,7 +2,7 @@ name: Run Anime Scraper Every Hour
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 * * * *'  # كل ساعة عند الدقيقة صفر
   workflow_dispatch:
 
 jobs:
