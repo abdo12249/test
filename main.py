@@ -6,6 +6,8 @@ import re
 from datetime import datetime
 import os
 import base64
+from io import StringIO
+import sys
 
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
@@ -20,11 +22,10 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 scraper = cloudscraper.create_scraper()
 
-# تعديل دالة to_id_format للسماح بـ () فقط
 def to_id_format(text):
     text = text.strip().lower()
     text = text.replace(":", "")
-    text = re.sub(r"[^a-z0-9()!\- ]", "", text)  # السماح بـ () و ! والشرطة والمسافات
+    text = re.sub(r"[^a-z0-9()!\- ]", "", text)
     return text.replace(" ", "-")
 
 def get_episode_links():
@@ -84,7 +85,6 @@ def get_episode_data(episode_url):
             servers.append({"serverName": name, "url": url})
     return anime_title, episode_number, full_title, servers
 
-# حفظ السجل محليًا في ملف log.json
 def save_log_local(anime_title, episode_number, episode_link):
     entry = {
         "anime_title": anime_title,
@@ -104,13 +104,11 @@ def save_log_local(anime_title, episode_number, episode_link):
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"📝 تم تحديث السجل المحلي في {log_filename}")
 
-    # رفع log.json إلى repo_name2
     api_url = f"https://api.github.com/repos/{repo_name2}/contents/{log_filename}"
     with open(log_filename, "rb") as f:
         content = f.read()
     encoded = base64.b64encode(content).decode()
     headers = {"Authorization": f"token {access_token}"}
-    # تحقق إن كان الملف موجودًا
     r = scraper.get(api_url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
@@ -208,15 +206,51 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
             print(f"❌ فشل رفع التحديث إلى GitHub: {r.status_code} {r.text}")
 
 # =========================
-# التنفيذ الرئيسي
+# التنفيذ الرئيسي المتقدم
 
 all_links = get_episode_links()
+consecutive_duplicates = 0
+extra_checks_after_new = 0
+max_consecutive_duplicates = 5
+max_extra_checks = 5
+new_data_found = False
 
 for idx, link in enumerate(all_links):
     print(f"\n🔢 حلقة {idx+1}/{len(all_links)}")
     anime_name, episode_number, full_title, server_list = get_episode_data(link)
-    if anime_name and server_list:
-        save_to_json(anime_name, episode_number, full_title, server_list)
-    else:
+    if not (anime_name and server_list):
         print("❌ تخطيت الحلقة بسبب خطأ.")
+        continue
+
+    temp_stdout = StringIO()
+    sys_stdout_original = sys.stdout
+    sys.stdout = temp_stdout
+
+    save_to_json(anime_name, episode_number, full_title, server_list)
+
+    sys.stdout = sys_stdout_original
+    result = temp_stdout.getvalue()
+
+    if "تم تخطيها" in result:
+        consecutive_duplicates += 1
+        print(f"⚠️ الحلقة {episode_number} مكررة (المتتالية: {consecutive_duplicates})")
+    else:
+        new_data_found = True
+        consecutive_duplicates = 0
+        extra_checks_after_new += 1
+        print(f"🆕 تم العثور على بيانات جديدة (التحقق الإضافي: {extra_checks_after_new})")
+
+    if consecutive_duplicates >= max_consecutive_duplicates and extra_checks_after_new == 0:
+        print("⏸️ تم إيقاف الفحص مؤقتًا بسبب 5 حلقات مكررة بدون جديد.")
+        break
+
+    if extra_checks_after_new >= max_extra_checks:
+        print("✅ تم التحقق من 5 حلقات إضافية بعد العثور على بيانات جديدة.")
+        break
+
     time.sleep(1)
+
+if new_data_found:
+    print("⏳ تم العثور على تحديثات، سيتم الفحص مرة أخرى خلال 10 دقائق.")
+else:
+    print("🕐 لم يتم العثور على جديد، سيتم الفحص خلال ساعة.")
