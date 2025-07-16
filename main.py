@@ -22,7 +22,9 @@ scraper = cloudscraper.create_scraper()
 def to_id_format(text):
     text = text.strip().lower()
     text = text.replace(":", "")
+    # إزالة كل شيء ماعدا أحرف صغيرة وأرقام ومسافة وشرطة
     text = re.sub(r"[^a-z0-9\- ]", "", text)
+    # استبدال المسافات بشرطة -
     return text.replace(" ", "-")
 
 def get_episode_links():
@@ -42,7 +44,8 @@ def get_episode_links():
     return episode_links
 
 def check_episode_on_github(anime_title):
-    filename = to_id_format(anime_title) + ".json"
+    anime_id = to_id_format(anime_title)
+    filename = anime_id + ".json"
     url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
     headers = {"Authorization": f"token {access_token}"}
     response = scraper.get(url, headers=headers)
@@ -93,6 +96,37 @@ def get_episode_data(episode_url):
 
     return anime_title, episode_number, full_title, servers
 
+def log_created_anime(anime_title, filename):
+    log_api_url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/log.txt"
+    headers = {"Authorization": f"token {access_token}"}
+
+    resp = scraper.get(log_api_url, headers=headers)
+    if resp.status_code == 200:
+        content_json = resp.json()
+        sha = content_json.get("sha")
+        existing_content = base64.b64decode(content_json.get("content")).decode()
+    else:
+        sha = None
+        existing_content = ""
+
+    new_log_line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - أنشئ ملف جديد للأنمي: {anime_title} ({filename})\n"
+    updated_content = existing_content + new_log_line
+    encoded_content = base64.b64encode(updated_content.encode()).decode()
+
+    payload = {
+        "message": f"تحديث سجل الإنشاءات - {filename}",
+        "content": encoded_content,
+        "branch": "main"
+    }
+    if sha:
+        payload["sha"] = sha
+
+    r = scraper.put(log_api_url, headers=headers, json=payload)
+    if r.status_code in [200, 201]:
+        print("📝 تم تحديث ملف السجل بنجاح.")
+    else:
+        print(f"❌ فشل تحديث ملف السجل: {r.status_code} {r.text}")
+
 def save_to_json(anime_title, episode_number, episode_title, servers):
     anime_id = to_id_format(anime_title)
     filename = anime_id + ".json"
@@ -100,14 +134,6 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
     headers = {"Authorization": f"token {access_token}"}
 
     exists_on_github, github_data = check_episode_on_github(anime_title)
-
-    if not exists_on_github:
-        print("❌ الملف غير موجود على GitHub، لن يتم جمعه.")
-        return
-
-    if github_data is None:
-        print("⚠️ لم أتمكن من تحميل محتوى الملف من GitHub.")
-        return
 
     ep_data = {
         "number": int(episode_number) if episode_number.isdigit() else episode_number,
@@ -117,6 +143,35 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         "image": f"https://abdo12249.github.io/1/images/{anime_id}.webp",
         "servers": servers
     }
+
+    if not exists_on_github:
+        print(f"🚀 إنشاء ملف جديد للأنمي: {filename}")
+
+        new_data = {
+            "animeTitle": anime_title,
+            "episodes": [ep_data]
+        }
+
+        content = json.dumps(new_data, indent=2, ensure_ascii=False)
+        encoded = base64.b64encode(content.encode()).decode()
+
+        payload = {
+            "message": f"إنشاء ملف {filename} مع الحلقة {episode_number}",
+            "content": encoded,
+            "branch": "main"
+        }
+
+        r = scraper.put(api_url, headers=headers, json=payload)
+        if r.status_code in [200, 201]:
+            print(f"✅ تم إنشاء الملف ورفع البيانات على GitHub.")
+            log_created_anime(anime_title, filename)
+        else:
+            print(f"❌ فشل إنشاء الملف على GitHub: {r.status_code} {r.text}")
+        return
+
+    if github_data is None:
+        print("⚠️ لم أتمكن من تحميل محتوى الملف من GitHub.")
+        return
 
     updated = False
     found = False
@@ -158,7 +213,9 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         else:
             print(f"❌ فشل رفع التحديث إلى GitHub: {r.status_code} {r.text}")
 
-# ✅ تنفيذ الكود
+# =========================
+# تنفيذ الكود الأساسي
+
 all_links = get_episode_links()
 
 for idx, link in enumerate(all_links):
