@@ -22,4 +22,6 @@ jobs:
         run: pip install cloudscraper beautifulsoup4
 
       - name: ▶️ تشغيل السكربت
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}   # تمرير التوكن من Secrets
         run: python main.py
