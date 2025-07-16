@@ -7,7 +7,11 @@ from datetime import datetime
 import os
 import base64
 
-print("📂 ملف log.json موجود في:", os.path.abspath("log.json"))
+# ضبط مكان ملف السجل في مجلد "test" بجانب main.py
+log_folder = "test"
+os.makedirs(log_folder, exist_ok=True)
+log_file = os.path.join(log_folder, "log.json")
+print("📂 ملف log.json موجود في:", os.path.abspath(log_file))
 
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
@@ -83,9 +87,7 @@ def get_episode_data(episode_url):
             servers.append({"serverName": name, "url": url})
     return anime_title, episode_number, full_title, servers
 
-# دالة جديدة: حفظ سجل مبسط محلياً في log.json
 def save_log_local(anime_title, episode_number, episode_link):
-    log_file = "log.json"  # نفس مجلد main.py
     entry = {
         "anime_title": anime_title,
         "episode_number": episode_number,
@@ -138,7 +140,6 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         r = scraper.put(api_url, headers=headers, json=payload)
         if r.status_code in [200, 201]:
             print(f"✅ تم إنشاء الملف ورفع البيانات على GitHub.")
-            # هنا تحفظ السجل المحلي
             save_log_local(anime_title, episode_number, ep_data["link"])
         else:
             print(f"❌ فشل إنشاء الملف على GitHub: {r.status_code} {r.text}")
