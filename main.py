@@ -97,7 +97,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
     anime_id = to_id_format(anime_title)
     filename = anime_id + ".json"
     api_url = f"https://api.github.com/repos/{repo_name}/contents/{remote_folder}/{filename}"
-    headers = {"Authorization": f"token {access_token}"}
+    headers = {"Authorization": f"token {ACCESS_TOKEN}"}
 
     exists_on_github, github_data = check_episode_on_github(anime_title)
 
