@@ -5,9 +5,10 @@ import json
 import re
 from datetime import datetime
 import base64
+import os  # لاستيراد المتغيرات البيئية
 
 # إعداد GitHub
-access_token = "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"
+access_token = os.getenv("ACCESS_TOKEN")  # اخذ التوكن من المتغير البيئي
 repo_name = "abdo12249/1"
 remote_folder = "test1/episodes"
 
