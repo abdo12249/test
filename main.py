@@ -7,16 +7,12 @@ from datetime import datetime
 import os
 import base64
 
-# ضبط مكان ملف السجل في مجلد "test" بجانب main.py
-log_folder = "test"
-os.makedirs(log_folder, exist_ok=True)
-log_file = os.path.join(log_folder, "log.json")
-print("📂 ملف log.json موجود في:", os.path.abspath(log_file))
-
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
 repo_name = "abdo12249/1"
+repo_name2 = "abdo12249/test"  # لتخزين log.json
 remote_folder = "test1/episodes"
+log_filename = "log.json"
 
 BASE_URL = "https://4i.nxdwle.shop"
 EPISODE_LIST_URL = BASE_URL + "/episode/"
@@ -24,10 +20,11 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 scraper = cloudscraper.create_scraper()
 
+# تعديل دالة to_id_format للسماح بـ () فقط
 def to_id_format(text):
     text = text.strip().lower()
     text = text.replace(":", "")
-    text = re.sub(r"[^a-z0-9\- ]", "", text)
+    text = re.sub(r"[^a-z0-9()\- ]", "", text)
     return text.replace(" ", "-")
 
 def get_episode_links():
@@ -87,15 +84,15 @@ def get_episode_data(episode_url):
             servers.append({"serverName": name, "url": url})
     return anime_title, episode_number, full_title, servers
 
+# حفظ السجل محليًا في ملف log.json
 def save_log_local(anime_title, episode_number, episode_link):
     entry = {
         "anime_title": anime_title,
         "episode_number": episode_number,
         "episode_link": episode_link
     }
-    # اقرأ المحتوى السابق لو موجود
-    if os.path.exists(log_file):
-        with open(log_file, "r", encoding="utf-8") as f:
+    if os.path.exists(log_filename):
+        with open(log_filename, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError:
@@ -103,10 +100,37 @@ def save_log_local(anime_title, episode_number, episode_link):
     else:
         data = []
     data.append(entry)
-    # اكتب المحتوى بعد الإضافة
-    with open(log_file, "w", encoding="utf-8") as f:
+    with open(log_filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"📝 تم تحديث السجل المحلي في {log_file}")
+    print(f"📝 تم تحديث السجل المحلي في {log_filename}")
+
+    # رفع log.json إلى repo_name2
+    api_url = f"https://api.github.com/repos/{repo_name2}/contents/{log_filename}"
+    with open(log_filename, "rb") as f:
+        content = f.read()
+    encoded = base64.b64encode(content).decode()
+    headers = {"Authorization": f"token {access_token}"}
+    # تحقق إن كان الملف موجودًا
+    r = scraper.get(api_url, headers=headers)
+    if r.status_code == 200:
+        sha = r.json().get("sha")
+        payload = {
+            "message": "تحديث سجل log.json",
+            "content": encoded,
+            "branch": "main",
+            "sha": sha
+        }
+    else:
+        payload = {
+            "message": "إنشاء ملف log.json",
+            "content": encoded,
+            "branch": "main"
+        }
+    r = scraper.put(api_url, headers=headers, json=payload)
+    if r.status_code in [200, 201]:
+        print("📤 تم رفع log.json إلى GitHub.")
+    else:
+        print(f"❌ فشل رفع log.json: {r.status_code} {r.text}")
 
 def save_to_json(anime_title, episode_number, episode_title, servers):
     anime_id = to_id_format(anime_title)
