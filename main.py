@@ -7,6 +7,8 @@ from datetime import datetime
 import os
 import base64
 
+print("📂 ملف log.json موجود في:", os.path.abspath("log.json"))
+
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
 repo_name = "abdo12249/1"
