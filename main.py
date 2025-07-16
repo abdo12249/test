@@ -5,6 +5,7 @@ import json
 import re
 from datetime import datetime
 import os
+import base64
 
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
