@@ -4,7 +4,7 @@ import requests
 from datetime import datetime
 
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
-DISCORD_USER_ID = "1395041371181809754"  # Anime(AMK4UP)
+DISCORD_USER_NAME = "Anime(AMK4UP)"  # اسم المستخدم الظاهر بدل الـ Mention
 
 def send_discord_notification(anime_title, episode_number, episode_link, image_url=None):
     if not DISCORD_WEBHOOK_URL:
@@ -14,7 +14,7 @@ def send_discord_notification(anime_title, episode_number, episode_link, image_u
     embed = {
         "title": f"{anime_title} - الحلقة {episode_number}",
         "url": episode_link,
-        "description": f"🎉 تم إصدار حلقة جديدة!\n<@{DISCORD_USER_ID}>",
+        "description": f"🎉 تم إصدار حلقة جديدة!\n{DISCORD_USER_NAME}",
         "color": 0x1ABC9C,
         "fields": [
             {
@@ -31,11 +31,8 @@ def send_discord_notification(anime_title, episode_number, episode_link, image_u
         embed["image"] = {"url": image_url}
 
     payload = {
-        "content": f"<@{DISCORD_USER_ID}>",
-        "embeds": [embed],
-        "allowed_mentions": {
-            "users": [DISCORD_USER_ID]
-        }
+        "content": "🎥 حلقة جديدة!",  # أو اتركه "" لو لا تريد شيء في البداية
+        "embeds": [embed]
     }
 
     try:
