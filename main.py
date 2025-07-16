@@ -6,9 +6,12 @@ import re
 from datetime import datetime
 import os
 import base64
+import requests
 
-# إعداد GitHub
+# إعداد GitHub و Discord
 access_token = os.getenv("ACCESS_TOKEN")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+
 repo_name = "abdo12249/1"
 repo_name2 = "abdo12249/test"  # لتخزين log.json
 remote_folder = "test1/episodes"
@@ -20,11 +23,46 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 scraper = cloudscraper.create_scraper()
 
-# تعديل دالة to_id_format للسماح بـ () فقط
+def send_discord_notification(anime_title, episode_number, episode_link, image_url=None):
+    user_id = "1395041371181809754"  # 👈 ضع هنا ID الخاص بـ Anime(AMK4UP)
+
+    embed = {
+        "title": f"{anime_title} - الحلقة {episode_number}",
+        "url": episode_link,
+        "description": f"🎉 تم إصدار حلقة جديدة!\n<@{user_id}>",
+        "color": 0x1ABC9C,
+        "fields": [
+            {
+                "name": "رابط المشاهدة",
+                "value": f"[اضغط هنا للمشاهدة]({episode_link})",
+                "inline": False
+            }
+        ],
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    payload = {
+        "content": f"<@{user_id}>",  # 👈 الإشارة خارج الـ Embed
+        "embeds": [embed],
+        "allowed_mentions": {
+            "users": [user_id]
+        }
+    }
+
+    try:
+        response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
+        if response.status_code in [200, 204]:
+            print("📢 تم إرسال إشعار إلى Discord.")
+        else:
+            print(f"❌ فشل إرسال الإشعار: {response.status_code} {response.text}")
+    except Exception as e:
+        print(f"❌ خطأ أثناء إرسال الإشعار إلى Discord: {e}")
+
+
 def to_id_format(text):
     text = text.strip().lower()
     text = text.replace(":", "")
-    text = re.sub(r"[^a-z0-9()!\- ]", "", text)  # السماح بـ () و ! والشرطة والمسافات
+    text = re.sub(r"[^a-z0-9()!\- ]", "", text)
     return text.replace(" ", "-")
 
 def get_episode_links():
@@ -34,12 +72,7 @@ def get_episode_links():
         print("❌ فشل تحميل الصفحة")
         return []
     soup = BeautifulSoup(response.text, "html.parser")
-    episode_links = []
-    for a in soup.select(".episodes-card-title a"):
-        href = a.get("href")
-        if isinstance(href, str) and href.startswith("http"):
-            episode_links.append(href)
-    return episode_links
+    return [a.get("href") for a in soup.select(".episodes-card-title a") if a.get("href", "").startswith("http")]
 
 def check_episode_on_github(anime_title):
     anime_id = to_id_format(anime_title)
@@ -84,7 +117,6 @@ def get_episode_data(episode_url):
             servers.append({"serverName": name, "url": url})
     return anime_title, episode_number, full_title, servers
 
-# حفظ السجل محليًا في ملف log.json
 def save_log_local(anime_title, episode_number, episode_link):
     entry = {
         "anime_title": anime_title,
@@ -104,13 +136,11 @@ def save_log_local(anime_title, episode_number, episode_link):
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"📝 تم تحديث السجل المحلي في {log_filename}")
 
-    # رفع log.json إلى repo_name2
     api_url = f"https://api.github.com/repos/{repo_name2}/contents/{log_filename}"
     with open(log_filename, "rb") as f:
         content = f.read()
     encoded = base64.b64encode(content).decode()
     headers = {"Authorization": f"token {access_token}"}
-    # تحقق إن كان الملف موجودًا
     r = scraper.get(api_url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
@@ -165,6 +195,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         if r.status_code in [200, 201]:
             print(f"✅ تم إنشاء الملف ورفع البيانات على GitHub.")
             save_log_local(anime_title, episode_number, ep_data["link"])
+            send_discord_notification(anime_title, episode_number, ep_data["link"], ep_data["image"])
         else:
             print(f"❌ فشل إنشاء الملف على GitHub: {r.status_code} {r.text}")
         return
@@ -182,6 +213,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
                 github_data["episodes"][i] = ep_data
                 updated = True
                 print(f"🔄 تم تحديث الحلقة {episode_number} لأن السيرفرات تغيرت.")
+                send_discord_notification(anime_title, episode_number, ep_data["link"], ep_data["image"])
             else:
                 print(f"⚠️ الحلقة {episode_number} موجودة بنفس البيانات، تم تخطيها.")
             break
@@ -189,6 +221,7 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         github_data["episodes"].append(ep_data)
         updated = True
         print(f"➕ تم إضافة الحلقة {episode_number} الجديدة.")
+        send_discord_notification(anime_title, episode_number, ep_data["link"], ep_data["image"])
     if updated:
         content = json.dumps(github_data, indent=2, ensure_ascii=False)
         encoded = base64.b64encode(content.encode()).decode()
@@ -204,12 +237,11 @@ def save_to_json(anime_title, episode_number, episode_title, servers):
         r = scraper.put(api_url, headers=headers, json=payload)
         if r.status_code in [200, 201]:
             print(f"🚀 تم رفع التحديث إلى GitHub بنجاح.")
+            save_log_local(anime_title, episode_number, ep_data["link"])
         else:
             print(f"❌ فشل رفع التحديث إلى GitHub: {r.status_code} {r.text}")
 
-# =========================
-# التنفيذ الرئيسي
-
+# التنفيذ
 all_links = get_episode_links()
 
 for idx, link in enumerate(all_links):
