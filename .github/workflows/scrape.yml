@@ -1,0 +1,25 @@
+name: Run Anime Scraper Every Hour
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 سحب المستودع
+        uses: actions/checkout@v3
+
+      - name: 🔽 إعداد Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 📦 تثبيت المتطلبات
+        run: pip install requests beautifulsoup4
+
+      - name: ▶️ تشغيل السكربت
+        run: python main.py
