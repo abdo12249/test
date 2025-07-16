@@ -7,10 +7,10 @@ from datetime import datetime
 import os
 import base64
 import requests
+from notifier import send_discord_notification
 
 # إعداد GitHub و Discord
 access_token = os.getenv("ACCESS_TOKEN")
-DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 repo_name = "abdo12249/1"
 repo_name2 = "abdo12249/test"  # لتخزين log.json
@@ -22,47 +22,6 @@ EPISODE_LIST_URL = BASE_URL + "/episode/"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 scraper = cloudscraper.create_scraper()
-
-def send_discord_notification(anime_title, episode_number, episode_link, image_url=None):
-    user_id = "1395041371181809754"  # 👈 ID الخاص بـ Anime(AMK4UP)
-
-    embed = {
-        "title": f"{anime_title} - الحلقة {episode_number}",
-        "url": episode_link,
-        "description": f"🎉 تم إصدار حلقة جديدة!\n<@{user_id}>",
-        "color": 0x1ABC9C,
-        "fields": [
-            {
-                "name": "رابط المشاهدة",
-                "value": f"[اضغط هنا للمشاهدة]({episode_link})",
-                "inline": False
-            }
-        ],
-        "timestamp": datetime.utcnow().isoformat()
-    }
-
-    if image_url:
-        embed["thumbnail"] = {"url": image_url}   # 👈 صورة مصغرة
-        embed["image"] = {"url": image_url}       # 👈 صورة كاملة
-
-    payload = {
-        "content": f"<@{user_id}>",  # الإشارة خارج الـ Embed
-        "embeds": [embed],
-        "allowed_mentions": {
-            "users": [user_id]
-        }
-    }
-
-    try:
-        response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
-        if response.status_code in [200, 204]:
-            print("📢 تم إرسال إشعار إلى Discord.")
-        else:
-            print(f"❌ فشل إرسال الإشعار: {response.status_code} {response.text}")
-    except Exception as e:
-        print(f"❌ خطأ أثناء إرسال الإشعار إلى Discord: {e}")
-
-
 
 def to_id_format(text):
     text = text.strip().lower()
