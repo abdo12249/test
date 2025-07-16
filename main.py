@@ -4,9 +4,8 @@ import time
 import json
 import re
 from datetime import datetime
-import base64  # مهم جدا
+import base64
 import os
-print("base64 module loaded:", base64)
 
 # إعداد GitHub
 access_token = os.getenv("ACCESS_TOKEN")
