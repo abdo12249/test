@@ -5,7 +5,10 @@ import json
 import re
 from datetime import datetime
 import base64
+from keep_alive import keep_alive
 
+# 🔁 إبقاء السيرفر شغال
+keep_alive()
 
 # إعداد GitHub
 access_token = "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"
